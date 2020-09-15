@@ -132,19 +132,11 @@ for j in range(len(df_data['AHU'])):
 				'password': pass_ws,
 				'cmd': 'select',
 				'cmd_param': '0',
-				#'zawall_mode': 'ZAWALL_PLUS',
-				#'zawall_size': n,
 				'qv': qv_calc,
 				'psf': psf,
 				'spec_products': 'PF_00',
 				'article_no': new_article_no,
-				#'current_phase': '3',
-				#'voltage': '400',
 				'nominal_frequency': '50',
-				#'installation_height_mm': height,
-				#'installation_width_mm': width,
-				#'installation_length_mm': '2000',
-				#'installation_mode': 'RLT_2017',
 				'sessionid': session_id
 			}
 
@@ -157,13 +149,8 @@ for j in range(len(df_data['AHU'])):
 			print('\n')
 
 			try:
-				#no_fans = get_response(fan_dict)['ZAWALL_SIZE']
 				new_consump = n*get_response(fan_dict)['ZA_PSYS']
-
-				#if new_consump <= (old_consump*power_factor):
 				new_fan = df.loc[df['Article no'] == new_article_no, 'Description'].values[0]
-				#zawall_arr = get_response(fan_dict)['ZAWALL_ARRANGEMENT']
-				#new_no_fans = 1 if zawall_arr == 0 else int(zawall_arr[:2])
 				new_no_fans = n
 				new_cost = new_no_fans*new_cost
 
