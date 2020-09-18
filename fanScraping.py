@@ -206,7 +206,7 @@ for fileName in glob.glob('*.pdf'):
 	'DV60', 'DV80', 'DV100', 'DV120', 'DV150', 'DV190', 'DV240',
 	'Geniox 10', 'Geniox 11', 'Geniox 12', 'Geniox 14', 'Geniox 16',
 	'Geniox 18', 'Geniox 20', 'Geniox 22', 'Geniox 24', 'Geniox 27',
-	'Geniox 29']
+	'Geniox 29', 'Geniox 31']
 
 	# Read the pdf --------------------------------------------
 	fileName = fileName[:-4]
@@ -215,6 +215,7 @@ for fileName in glob.glob('*.pdf'):
 
 	# Get number of pages
 	number_of_pages = pdfReader.getNumPages()
+	print('File:', fileName)
 	print('Number of pages:', number_of_pages)
 	print('\n')
 
@@ -224,7 +225,13 @@ for fileName in glob.glob('*.pdf'):
 	print(aPageStart, aPageEnd)
 	print('\n')
 
-	units = fpFunction()
+	try:
+		units = fpFunction()
+	except:
+		print('*** Check datasheet language! ***')
+		print('\n')
+		continue
+
 	columns_units = ['Page start', 'Page end', 'Line', 'AHU', 'Ref', 'Airflow']
 	df_units = pd.DataFrame(units, columns = columns_units)
 
@@ -233,13 +240,6 @@ for fileName in glob.glob('*.pdf'):
 	for col in cols:
 		df_units[col] = df_units[col].astype(int)
 		df_units[col] = df_units[col] + 1
-
-	'''
-	name = 'Units.xlsx'
-	writer = pd.ExcelWriter(name)
-	df_units.to_excel(writer, index = False)
-	writer.save()
-	'''
 	
 	#---------------------------------------------------------------------------------------------------------------#
 	# Fan scraping
@@ -296,17 +296,19 @@ for fileName in glob.glob('*.pdf'):
 	df['Gross price'] = df['Gross price'].values * df['No Fans'].values
 	#---------------------------------------------------------------------------------------------------------------#
 
-	# Last tweaks
-	df['File name'] = fileName
-	df_outter = df_outter.append(df)
-
-	print('\n')
+	if df.empty:
+		print('*** Check if unit has metallic or special fans! ***')
+		print('\n')
+	else:
+		# Last tweaks
+		df['File name'] = fileName
+		df_outter = df_outter.append(df)
+		print('\n')
+		print(df_outter)
 
 name = 'Fans per AHU.xlsx'
 writer = pd.ExcelWriter(name)
 df_outter.to_excel(writer, index = False)
-writer.save()
-
+writer.save()	
 pdfFileObj.close()
-
-import fan_selection
+import fan_selection_syscad
