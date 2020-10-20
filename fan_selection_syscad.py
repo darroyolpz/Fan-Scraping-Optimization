@@ -4,8 +4,10 @@ import pandas as pd
 from pandas import ExcelWriter
 
 url = "http://fanselect.net:8079/FSWebService"
-user_ws, pass_ws = 'xxx', 'xxx'
+user_ws, pass_ws = 'XXX', 'XXX'
 power_factor = 1.015
+price_factor = 1.0
+bluefin_only = True
 
 # Get all the possible fans
 all_results = False
@@ -38,7 +40,7 @@ print('\n')
 # Pandas import
 # Open the quotation file
 excel_file = 'EC_FANS.xlsx'
-df = pd.read_excel(excel_file, usecols= ['Article no', 'Description', 'ID', 'Gross price', 'Plate'],
+df = pd.read_excel(excel_file, usecols= ['Article no', 'Description', 'ID', 'Gross price', 'Plate', 'Bluefin'],
 	dtype={'Article no': str, 'Gross price': float, 'Plate': float})
 
 print('List of fans:')
@@ -96,19 +98,25 @@ for j in range(len(df_data['Line'])):
 	df_fans['Original fans'] = old_no_fans
 	df_fans['Fan columns'] = np.floor(int(width)/df_fans['Plate'])
 	df_fans['Max fans dim'] = df_fans['Fan rows'] * df_fans['Fan columns']
-	df_fans['Max fans price'] = np.floor(old_cost/df_fans['Gross price'])
+	df_fans['Max fans price'] = np.floor(price_factor*old_cost/df_fans['Gross price'])
 	df_fans['Max fans'] = df_fans[['Max fans dim', 'Max fans price', 'Original fans']].min(axis=1)
 
 	# Just in case we have rounding errors
 	df_fans.loc[df_fans['Article no'] == old_article_no, 'Max fans'] = old_no_fans
 	df_fans = df_fans.loc[df_fans['Max fans'] > 0, :]
 
+	time.sleep(1)
+
+	# Bluefin only?
+	if bluefin_only:
+		df_fans = df_fans.loc[df_fans['Bluefin'].values == 1, :]
+	else:
+		df_fans = df_fans.loc[df_fans['Bluefin'].values == 0, :]
+
 	print('\n')
-	print('List of fans to use')
+	print('Final list of fans to use:')
 	print(df_fans)
 	print('\n')
-
-	time.sleep(1)
 
 	# Loop for fans on each number of line
 	for i in range(len(df_fans['Article no'])):
@@ -236,7 +244,11 @@ print('\n')
 total_old = result['Old cost'].sum()
 total_new = result['New cost'].sum()
 savings = total_old - total_new
-per = savings/total_old
-print('Total savings:', savings)
-print('Percentage:', per)
-print('\n')
+
+try:
+	per = savings/total_old
+	print('Total savings:', savings)
+	print('Percentage:', per)
+	print('\n')
+except:
+	print('No fan available for this project')
