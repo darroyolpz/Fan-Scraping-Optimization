@@ -4,7 +4,7 @@ import pandas as pd
 from pandas import ExcelWriter
 
 url = "http://fanselect.net:8079/FSWebService"
-user_ws, pass_ws = 'XXX', 'XXX'
+user_ws, pass_ws = 'xxx', 'xxx'
 power_factor = 1.015
 price_factor = 1.0
 bluefin_only = True
@@ -171,10 +171,10 @@ for j in range(len(df_data['Line'])):
 
 				if new_consump <= (old_consump*power_factor):
 					new_fan = df.loc[df['Article no'] == new_article_no, 'Description'].values[0]
-					#zawall_arr = get_response(fan_dict)['ZAWALL_ARRANGEMENT']
-					#new_no_fans = 1 if zawall_arr == 0 else int(zawall_arr[:2])
 					new_no_fans = n
 					new_cost = new_no_fans*new_cost
+					rpm = int(get_response(fan_dict)['ZA_N'])
+					rpm_max = get_response(fan_dict)['ZA_NMAX']
 
 					print('Number of line:', line)
 					print('AHU:', ahu)
@@ -182,12 +182,14 @@ for j in range(len(df_data['Line'])):
 					print('New article no:', new_article_no)
 					print('New number of fans:', new_no_fans)
 					print('New consump.:', new_consump)
+					print('New RPM:', rpm)
+					print('New RPM Max:', rpm_max)
 					print('New cost:', new_cost)		
 					print('\n')
 
 					inner_list.append([line, ref, ahu, height, width, qv, psf,
 						old_fan, old_article_no, old_no_fans, old_consump, old_cost,
-						new_fan, new_article_no, new_no_fans, new_consump, new_cost, file_name])
+						new_fan, new_article_no, new_no_fans, new_consump, rpm, rpm_max, new_cost, file_name])
 
 					# Stop the loop
 					print('Loop stopping!')
@@ -227,7 +229,7 @@ for j in range(len(df_data['Line'])):
 # Save all the results to a new dataframe
 col = ['Line', 'Ref', 'AHU', 'Height', 'Width', 'Airflow', 'Static Press.',
 		'Old fan', 'Old article no', 'Old no fans', 'Old consump.', 'Old cost',
-		'New fan', 'New article no', 'New no fans', 'New consump.', 'New cost', 'Filename']
+		'New fan', 'New article no', 'New no fans', 'New consump.', 'RPM', 'RPM Max', 'New cost', 'Filename']
 
 result = pd.DataFrame(outter_list, columns = col)
 result['Savings'] = result['Old cost'] - result['New cost']
