@@ -1,3 +1,3 @@
 # BO Fan Selection
 
-Code for scraping and selecting the fans using the web-service oh Ziehl.
+Code for scraping and selecting fans using Ziehl web-service.
