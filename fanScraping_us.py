@@ -187,7 +187,7 @@ extList = []
 newList = []
 
 # EC_FANS
-excel_file = 'EC_FANS.xlsx'
+excel_file = 'EC_FANS_US.xlsx'
 df_ec = pd.read_excel(excel_file, dtype={'Item': str, 'Gross price': float})
 
 # Empty dataframe
@@ -314,4 +314,4 @@ writer = pd.ExcelWriter(name)
 df_outter.to_excel(writer, index = False)
 writer.save()	
 pdfFileObj.close()
-import fan_selection_syscad
+import fan_selection_syscad_us
