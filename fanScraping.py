@@ -2,6 +2,9 @@ import PyPDF2, glob, os, csv, sys
 from pandas import ExcelWriter
 import pandas as pd
 
+# Standard or US
+standard_version = True
+
 # Function to extract the pageContent ---------------------
 def extractContent(pageNumber):
 	pageObj = pdfReader.getPage(pageNumber)
@@ -58,7 +61,7 @@ def fpFunction():
 		print('\n')
 
 		# Get line
-		wordStart = 'Unit no.'
+		wordStart = 'Unit name:'
 		wordEnd = 'Fecha'
 		line = get_value_function(pageContent, wordStart, wordEnd)
 
@@ -86,8 +89,8 @@ def fpFunction():
 			ahu = '---'
 
 		# Get reference
-		wordStart = 'Planta no.'
-		wordEnd = 'Unit no.'
+		wordStart = 'Planta no. '
+		wordEnd = 'Unit'
 		ref = get_value_function(pageContent, wordStart, wordEnd)
 
 		# Airflow
@@ -187,7 +190,10 @@ extList = []
 newList = []
 
 # EC_FANS
-excel_file = 'EC_FANS.xlsx'
+if standard_version:
+	excel_file = 'EC_FANS.xlsx'
+else:
+	excel_file = 'EC_FANS_US.xlsx'
 df_ec = pd.read_excel(excel_file, dtype={'Item': str, 'Gross price': float})
 
 # Empty dataframe
@@ -207,6 +213,7 @@ for fileName in glob.glob('*.pdf'):
 	'Geniox 10', 'Geniox 11', 'Geniox 12', 'Geniox 14', 'Geniox 16',
 	'Geniox 18', 'Geniox 20', 'Geniox 22', 'Geniox 24', 'Geniox 27',
 	'Geniox 29', 'Geniox 31',
+	'Geniox 35', 'Geniox 38', 'Geniox 41', 'Geniox 44',
 	'Geniox On 10', 'Geniox On 11', 'Geniox On 12', 'Geniox On 14', 'Geniox On 16',
 	'Geniox On 18', 'Geniox On 20', 'Geniox On 22', 'Geniox On 24', 'Geniox On 27',
 	'Geniox On 29', 'Geniox On 31']
@@ -306,12 +313,29 @@ for fileName in glob.glob('*.pdf'):
 		# Last tweaks
 		df['File name'] = fileName
 		df_outter = df_outter.append(df)
-		print('\n')
-		print(df_outter)
 
+# Add the last columns
+df_outter = pd.merge(df_outter, df_ec.loc[:, ['ID', 'Item no', 'Description']], on='ID')
+df_outter['Total sales price'] = df_outter['Gross price'].values/0.6 # 40% CM
+
+# Reorder columns
+new_cols = ['Page', 'Airflow', 'Static Press.', 'Motor Power', 'RPM', 'Consump. kW',
+			'Line', 'AHU', 'Ref', 'No Fans', 'ID', 'Item no', 'Description', 'Gross price', 'Total sales price', 'File name']
+			
+df_outter = df_outter.reindex(columns=new_cols)
+
+# Sort the columns
+df_outter = df_outter.sort_values(["File name", "Page"], ascending = (True, True))
+
+# Send to Excel
 name = 'Fans per AHU.xlsx'
 writer = pd.ExcelWriter(name)
 df_outter.to_excel(writer, index = False)
 writer.save()	
 pdfFileObj.close()
-import fan_selection_syscad
+
+# Fan version
+if standard_version:
+	import fan_selection_syscad # Standard
+else:
+	import fan_selection_syscad_us # US version 230V III
