@@ -2,7 +2,7 @@
 
 ## Background
 
-Ok so here's the deal: I've been working for an air handling unit manufacturer since 2014. I've been in many departments, but mainly in operations and export in the last few years.
+I've been working for an air handling unit manufacturer since 2014. I've been in many departments, but mainly in operations and export in the last few years.
 
 At sales side, we try to make it super simple for the customer to buy our units. Selection software is fast and datasheets provided are good, so "*no problem*" here.
 
@@ -36,8 +36,6 @@ Since I already knew how to extract data from datasheets, I decided to use the Z
 
 ![ZA factory](https://raw.githubusercontent.com/darroyolpz/Fan-Scraping-Optimization/master/img/za_factory.jpg)
 
-![ZA factory](https://raw.githubusercontent.com/darroyolpz/Fan-Scraping-Optimization/master/img/za_factory_01.jpg)
-
 Finally the code was working pretty well and also saved a ton of time for future selections.
 
 ## Fans optimization
@@ -46,4 +44,4 @@ Our selection program provides solutions for highest energy effiency (we only ha
 
 While trying to squeeze some units for some customers, I realized we could save up to 8% if we used a different fan than the one provided in our datasheets. Nobody did this exercise before. Doing it manually takes time, but now it was possible with the script.
 
-As a result, we even added more models of fans in a new product we released in 2021. I felt really proud of it, as it all started by trying to facilitate the work of some colleagues.
+As a result, we even added more models of fans in a new product we released in 2021. I felt really proud of it, as it all started by trying to facilitate the work of some colleagues :v:
