@@ -1,21 +1,72 @@
 import PyPDF2, glob, os, csv, sys
+from PyPDF2 import PdfReader
 from pandas import ExcelWriter
 import pandas as pd
 
-# Standard or US
+# Standard or US ------------------------------------------
 standard_version = True
+
+# Get parameters database ---------------------------------
+excel_file = 'PARAMETERS.xlsx'
+df_param = pd.read_excel(excel_file)
+
+# Read the pdf --------------------------------------------
+fileName = '0020918678-.pdf'
+reader = PdfReader(fileName)
+
+# Get number of pages -------------------------------------
+number_of_pages = len(reader.pages)
+print(f"File: {fileName} | Number of pages: {number_of_pages}\n")
 
 # Function to extract the pageContent ---------------------
 def extractContent(pageNumber):
-	pageObj = pdfReader.getPage(pageNumber)
-	pageContent = pageObj.extractText()
+	pageObj = reader.pages[pageNumber]
+	pageContent = pageObj.extract_text()
 	return pageContent
 # ---------------------------------------------------------
 
+# Get SINGLE value function---------------------------------
+def get_value_function(pageContent, wordStart, wordEnd, min_len = 1, max_len = 45):
+	# wordStart and wordEnd are unique values, not lists
+	posStart = pageContent.index(wordStart) + len(wordStart)
+	newContent = pageContent[posStart:]
+
+	#posEnd = indexFunction(wordEnd, newContent)
+	posEnd = newContent.index(wordEnd)
+	unitFeature = newContent[:posEnd].strip()
+
+	# Check the lenght in order to avoid errors
+	if (len(unitFeature) > min_len) & (len(unitFeature) < max_len):
+		return unitFeature
+	else:
+		print('Not valid feature. Content lenght is not ok!')
+		return 'Error flag!'
+# ---------------------------------------------------------
+
+# Function to get the SystemairCAD version ----------------
+def syscad_ver():
+	# Extract only first page
+	pageContent = extractContent(0)
+
+	# Get version
+	wordStart, wordEnd = 'SystemairCAD 2.0 Geniox-1/', ' |'
+	try:
+		global syscad_version
+		syscad_version = get_value_function(pageContent, wordStart, wordEnd)
+	except:
+		print('Please check first page of PDF. It should be "SystemairCAD 2.0 Geniox-1"\n')
+# ---------------------------------------------------------
+
 # Function to get the range of pages of each unit ---------
-def pagesFunction(keyword = 'Unit no.:'):
+def pagesFunction():
+	# Array format - starting at zero (0)
 	aPageStart, aPageEnd = [], []
 	last_page = number_of_pages - 1
+
+	# Keyword
+	keyword = df_param.loc[(df_param['Version'] == syscad_version) &
+	(df_param['Function'] == 'pagesFunction') &
+	(df_param['Field'] == 'keyword'), 'wordStart'][0]
 
 	# Loop through all the pages
 	for pageNumber in range(last_page):
@@ -31,38 +82,42 @@ def pagesFunction(keyword = 'Unit no.:'):
 
 	# Get the very last page
 	aPageEnd.append(last_page)
+
+	# Human readable format
+	hPageStart, hPageEnd = [x+1 for x in aPageStart], [x+1 for x in aPageEnd]
+	print(f"Pages @ human readable format: {hPageStart}, {hPageEnd}\n")
+
 	return aPageStart, aPageEnd
+# ---------------------------------------------------------
 
-# Get SINGLE value function---------------------------------
-def get_value_function(pageContent, wordStart, wordEnd, min_len = 1, max_len = 45):
-	# wordStart and wordEnd are unique values, not lists
-	posStart = pageContent.index(wordStart) + len(wordStart)
-	newContent = pageContent[posStart:]
+# Function extractWords -----------------------------------
+def extractWords(function, field):
+	# Helper to slice the parameters dataset
+	wordStart = df_param.loc[(df_param['Version'] == syscad_version) &
+	(df_param['Function'] == function) &
+	(df_param['Field'] == field), 'wordStart'].values[0]
 
-	#posEnd = indexFunction(wordEnd, newContent)
-	posEnd = newContent.index(wordEnd)
-	#unitFeature = newContent[:posEnd].strip()
-	unitFeature = newContent[:posEnd]
+	wordEnd = df_param.loc[(df_param['Version'] == syscad_version) &
+	(df_param['Function'] == function) &
+	(df_param['Field'] == field), 'wordEnd'].values[0]
 
-	# Check the lenght in order to avoid errors
-	if (len(unitFeature) > min_len) & (len(unitFeature) < max_len):
-		return unitFeature
+	# Check if return one or two words
+	if pd.isna(wordEnd):
+		return wordStart
 	else:
-		print('Not valid feature. Content lenght is not ok!')
-		return 'Error flag!'
+		return wordStart, wordEnd
+# ---------------------------------------------------------
 
 # First page function -------------------------------------
 def fpFunction():
-	print('Starting first page function--------------------')
+	print(f"Starting first page function ------------------\n")
 	inner_list, outter_list = [], []
 	for page, pageEnd in zip(aPageStart, aPageEnd):
-		print('Looking at', page, 'page')
+		print(f"Looking at page {page+1}")
 		pageContent = extractContent(page)
-		print('\n')
 
 		# Get line
-		wordStart = 'Unit name:'
-		wordEnd = 'Fecha'
+		wordStart, wordEnd = extractWords('fpFunction', 'Line')
 		line = get_value_function(pageContent, wordStart, wordEnd)
 
 		# Reset ahu_value for each pageStart
@@ -89,19 +144,42 @@ def fpFunction():
 			ahu = '---'
 
 		# Get reference
-		wordStart = 'Planta no. '
-		wordEnd = 'Unit'
+		wordStart, wordEnd = extractWords('fpFunction', 'Reference')
 		ref = get_value_function(pageContent, wordStart, wordEnd)
 
 		# Airflow
-		wordStart = ')'
-		wordEnd = 'm'
+		wordStart, wordEnd = extractWords('fpFunction', 'Airflow')
 		airflow = get_value_function(pageContent, wordStart, wordEnd)
 
 		inner_list = [page, pageEnd, line, ahu, ref, airflow]
 		outter_list.append(inner_list)
 
+	print(f"\n-----------------------------------------------\n")
 	return outter_list
+# ---------------------------------------------------------
+
+# Get the range of the pages ------------------------------
+syscad_ver() # Mandary always
+aPageStart, aPageEnd = pagesFunction()
+last_page = aPageEnd[-1:][0]
+
+# Test for page content
+#print(extractContent(0))
+
+
+ahus = ['Geniox 10', 'Geniox 11', 'Geniox 12', 'Geniox 14', 'Geniox 16', 'Geniox 18',
+	'Geniox 20', 'Geniox 22', 'Geniox 24', 'Geniox 27', 'Geniox 29', 'Geniox 31', 'Geniox 35',
+	'Geniox 38', 'Geniox 41', 'Geniox 44', 'Geniox On 10', 'Geniox On 11', 'Geniox On 12',
+	'Geniox On 14', 'Geniox On 16', 'Geniox On 18', 'Geniox On 20', 'Geniox On 22', 'Geniox On 24',
+	'Geniox On 27', 'Geniox On 29', 'Geniox On 31']
+
+first_pages = fpFunction()
+
+print(first_pages)
+
+
+
+
 
 # Possible main--------------------------------------------
 def extractFeatures(aWordStart, aWordEnd, pageStart, pageEnd, allowed_pages = 1):
@@ -186,8 +264,7 @@ def extractFeatures(aWordStart, aWordEnd, pageStart, pageEnd, allowed_pages = 1)
 path = os.path.dirname(os.path.realpath(__file__))
 num_files = len(glob.glob1(path,'*.pdf'))
 
-extList = []
-newList = []
+extList, newList = [], []
 
 # EC_FANS
 if standard_version:
@@ -202,21 +279,19 @@ cols = ['Page', 'Airflow', 'Static Press.', 'Motor Power', 'RPM', 'Consump. kW',
 
 df_outter = pd.DataFrame(columns=cols)
 
+'''
+
 for fileName in glob.glob('*.pdf'):
 	# Initialize ----------------------------------------------
-	aDVSize = []
-	aDVLine = []
+	ahuSize = []
+	ahuLine = []
 	aPageStart = []
 
-	ahus = ['DV10', 'DV15', 'DV20', 'DV25', 'DV30', 'DV40', 'DV50',
-	'DV60', 'DV80', 'DV100', 'DV120', 'DV150', 'DV190', 'DV240',
-	'Geniox 10', 'Geniox 11', 'Geniox 12', 'Geniox 14', 'Geniox 16',
-	'Geniox 18', 'Geniox 20', 'Geniox 22', 'Geniox 24', 'Geniox 27',
-	'Geniox 29', 'Geniox 31',
-	'Geniox 35', 'Geniox 38', 'Geniox 41', 'Geniox 44',
-	'Geniox On 10', 'Geniox On 11', 'Geniox On 12', 'Geniox On 14', 'Geniox On 16',
-	'Geniox On 18', 'Geniox On 20', 'Geniox On 22', 'Geniox On 24', 'Geniox On 27',
-	'Geniox On 29', 'Geniox On 31']
+	ahus = ['Geniox 10', 'Geniox 11', 'Geniox 12', 'Geniox 14', 'Geniox 16', 'Geniox 18',
+	'Geniox 20', 'Geniox 22', 'Geniox 24', 'Geniox 27', 'Geniox 29', 'Geniox 31', 'Geniox 35',
+	'Geniox 38', 'Geniox 41', 'Geniox 44', 'Geniox On 10', 'Geniox On 11', 'Geniox On 12',
+	'Geniox On 14', 'Geniox On 16', 'Geniox On 18', 'Geniox On 20', 'Geniox On 22', 'Geniox On 24',
+	'Geniox On 27', 'Geniox On 29', 'Geniox On 31']
 
 	# Read the pdf --------------------------------------------
 	fileName = fileName[:-4]
@@ -339,3 +414,5 @@ if standard_version:
 	import fan_selection_syscad # Standard
 else:
 	import fan_selection_syscad_us # US version 230V III
+
+'''
