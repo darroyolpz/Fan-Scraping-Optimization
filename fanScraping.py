@@ -10,18 +10,13 @@ standard_version = True
 excel_file = 'PARAMETERS.xlsx'
 df_param = pd.read_excel(excel_file)
 
-# Read the pdf --------------------------------------------
-fileName = '0020918678-.pdf'
-reader = PdfReader(fileName)
-
-# Get number of pages -------------------------------------
-number_of_pages = len(reader.pages)
-print(f"File: {fileName} | Number of pages: {number_of_pages}\n")
-
 # Function to extract the pageContent ---------------------
 def extractContent(pageNumber):
 	pageObj = reader.pages[pageNumber]
 	pageContent = pageObj.extract_text()
+
+	# Create unique identifiers for extraction
+	pageContent = pageContent.replace("\n","")
 	return pageContent
 # ---------------------------------------------------------
 
@@ -52,7 +47,8 @@ def syscad_ver():
 	wordStart, wordEnd = 'SystemairCAD 2.0 Geniox-1/', ' |'
 	try:
 		global syscad_version
-		syscad_version = get_value_function(pageContent, wordStart, wordEnd)
+		syscad_version = get_value_function(pageContent, wordStart, wordEnd, 0)
+		print(f"SystemairCAD version: {syscad_version}\n")
 	except:
 		print('Please check first page of PDF. It should be "SystemairCAD 2.0 Geniox-1"\n')
 # ---------------------------------------------------------
@@ -64,9 +60,7 @@ def pagesFunction():
 	last_page = number_of_pages - 1
 
 	# Keyword
-	keyword = df_param.loc[(df_param['Version'] == syscad_version) &
-	(df_param['Function'] == 'pagesFunction') &
-	(df_param['Field'] == 'keyword'), 'wordStart'][0]
+	keyword = extractWords('pagesFunction', 'keyword')
 
 	# Loop through all the pages
 	for pageNumber in range(last_page):
@@ -85,7 +79,7 @@ def pagesFunction():
 
 	# Human readable format
 	hPageStart, hPageEnd = [x+1 for x in aPageStart], [x+1 for x in aPageEnd]
-	print(f"Pages @ human readable format: {hPageStart}, {hPageEnd}\n")
+	print(f"Pages (readable format): {hPageStart}, {hPageEnd}\n")
 
 	return aPageStart, aPageEnd
 # ---------------------------------------------------------
@@ -158,14 +152,12 @@ def fpFunction():
 	return outter_list
 # ---------------------------------------------------------
 
+
+'''
 # Get the range of the pages ------------------------------
 syscad_ver() # Mandary always
 aPageStart, aPageEnd = pagesFunction()
 last_page = aPageEnd[-1:][0]
-
-# Test for page content
-#print(extractContent(0))
-
 
 ahus = ['Geniox 10', 'Geniox 11', 'Geniox 12', 'Geniox 14', 'Geniox 16', 'Geniox 18',
 	'Geniox 20', 'Geniox 22', 'Geniox 24', 'Geniox 27', 'Geniox 29', 'Geniox 31', 'Geniox 35',
@@ -177,12 +169,14 @@ first_pages = fpFunction()
 
 print(first_pages)
 
+# Test for page content
+#print(extractContent(8))
+'''
 
 
-
-
-# Possible main--------------------------------------------
+# Possible main -------------------------------------------
 def extractFeatures(aWordStart, aWordEnd, pageStart, pageEnd, allowed_pages = 1):
+	print(f"Starting extractFeatures function -------------\n")
 	outter_list = []
 	for page in range(pageStart, pageEnd):
 		# Initiate the inner_list and get the page number
@@ -190,28 +184,30 @@ def extractFeatures(aWordStart, aWordEnd, pageStart, pageEnd, allowed_pages = 1)
 		
 		# Extract page content
 		pageContent = extractContent(page)
-		print('Checking at page number', page+1)
+		print(f"Checking at page number {page+1}")
 
 		for wordStart, wordEnd in zip(aWordStart, aWordEnd):
-			print('Looking for ', wordStart, 'and', wordEnd)
+			print(f"Looking for {wordStart} and {wordEnd}")
 
 			# Work in starting and ending pairs, page by page
 			if (wordStart in pageContent) and (wordEnd in pageContent):
-				print('Found on page', page+1)
-				print('\n')
-				print(pageContent)
-				print('\n')
+				print(f"Found on page {page+1}!\n")
+				#print(f"{pageContent}\n")
 				unitFeature = get_value_function(pageContent, wordStart, wordEnd)
 
-				# Important in case the next wordStart is above the previos one
-				print('Feature found:', unitFeature)
+				# Important in case the next wordStart is above the previous one
+				print(f"Feature found: {unitFeature}")
 				split_word = unitFeature + wordEnd
-				print('Split_word:', split_word)
-				if split_word in pageContent:
-					print('Split_word in pageContent')
-					print('\n')
-				posEnd = pageContent.index(split_word)
-				pageContent = pageContent[posEnd:]
+				print(f"Split_word: {split_word}")
+
+				# Check if this split_word exists
+				if (split_word in pageContent):
+					print(f"Split_word in pageContent") 
+					posEnd = pageContent.index(split_word)
+					pageContent = pageContent[posEnd:]
+				else:
+					print(f"Split_word {split_word} not found in page {page+1}\n") 
+					break
 
 				if unitFeature == 'Error flag!':
 					print('Error flag! Length not correct.')
@@ -253,6 +249,7 @@ def extractFeatures(aWordStart, aWordEnd, pageStart, pageEnd, allowed_pages = 1)
 			# Reset inner list for next feature
 			inner_list = []
 
+	print(f"----------------------------------------------\n")
 	try:
 		return outter_list
 	except:
@@ -279,13 +276,9 @@ cols = ['Page', 'Airflow', 'Static Press.', 'Motor Power', 'RPM', 'Consump. kW',
 
 df_outter = pd.DataFrame(columns=cols)
 
-'''
-
 for fileName in glob.glob('*.pdf'):
 	# Initialize ----------------------------------------------
-	ahuSize = []
-	ahuLine = []
-	aPageStart = []
+	ahuSize, ahuLine, aPageStart = [], [], []
 
 	ahus = ['Geniox 10', 'Geniox 11', 'Geniox 12', 'Geniox 14', 'Geniox 16', 'Geniox 18',
 	'Geniox 20', 'Geniox 22', 'Geniox 24', 'Geniox 27', 'Geniox 29', 'Geniox 31', 'Geniox 35',
@@ -294,22 +287,22 @@ for fileName in glob.glob('*.pdf'):
 	'Geniox On 27', 'Geniox On 29', 'Geniox On 31']
 
 	# Read the pdf --------------------------------------------
-	fileName = fileName[:-4]
-	pdfFileObj = open(fileName + '.pdf', 'rb')
-	pdfReader = PyPDF2.PdfFileReader(pdfFileObj)
+	#fileName = fileName[:-4]
+	#pdfFileObj = open(fileName + '.pdf', 'rb')
+	reader = PdfReader(fileName)
 
-	# Get number of pages
-	number_of_pages = pdfReader.getNumPages()
-	print('File:', fileName)
-	print('Number of pages:', number_of_pages)
-	print('\n')
+	# Get number of pages -------------------------------------
+	number_of_pages = len(reader.pages)
+	print(f"File: {fileName} | Number of pages: {number_of_pages}\n")
+
+	# SystemairCAD version ------------------------------------
+	syscad_ver() # Mandatory
 
 	# Get the range of the pages ------------------------------
 	aPageStart, aPageEnd = pagesFunction()
 	last_page = aPageEnd[-1:][0]
-	print(aPageStart, aPageEnd)
-	print('\n')
 
+	# First page function -------------------------------------
 	try:
 		units = fpFunction()
 	except:
@@ -328,10 +321,17 @@ for fileName in glob.glob('*.pdf'):
 	
 	#---------------------------------------------------------------------------------------------------------------#
 	# Fan scraping
-	aWordStart = ['-fancaudal de aire', 'húmedas)', 'Potencia', 'Velocidad (nominal)', 'incl. el control de velocidad']
-	aWordEnd = ['m', 'Pa', 'kW', 'RPM', 'kW']
-	columns = ['Page', 'Airflow', 'Static Press.', 'Motor Power', 'RPM', 'Consump. kW']
+
+	aWordStart = df_param.loc[(df_param['Version'] == syscad_version) &
+	(df_param['Function'] == 'extractFeatures'), 'wordStart'].values.tolist()
+
+	aWordEnd = df_param.loc[(df_param['Version'] == syscad_version) &
+	(df_param['Function'] == 'extractFeatures'), 'wordEnd'].values.tolist()
+
+
+	aWordEnd = [' m', ' Pa', ' kW', ' RPM', ' kW']
 	outter = extractFeatures(aWordStart, aWordEnd, 0, last_page, 1)
+	columns = ['Page', 'Airflow', 'Static Press.', 'Motor Power', 'RPM', 'Consump. kW']
 	df = pd.DataFrame(outter, columns = columns)
 	df['Page'] = df['Page'].astype(int)
 
@@ -407,12 +407,12 @@ name = 'Fans per AHU.xlsx'
 writer = pd.ExcelWriter(name)
 df_outter.to_excel(writer, index = False)
 writer.save()	
-pdfFileObj.close()
+#pdfFileObj.close()
 
+'''
 # Fan version
 if standard_version:
 	import fan_selection_syscad # Standard
 else:
 	import fan_selection_syscad_us # US version 230V III
-
 '''
