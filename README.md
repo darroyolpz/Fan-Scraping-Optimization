@@ -2,7 +2,7 @@
 
 ## Background
 
-I've been working for an air handling unit manufacturer since 2014. I've been in many departments, but mainly in operations and export in the last few years.
+I've been working for an air handling unit manufacturer since 2013. I've been in many departments, but mainly in operations and export in the last few years.
 
 At sales side, we try to make it super simple for the customer to buy our units. Selection software is fast and datasheets provided are good, so "*no problem*" here.
 
